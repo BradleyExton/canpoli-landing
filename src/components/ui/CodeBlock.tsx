@@ -1,34 +1,48 @@
 'use client';
 
 import React, { useState } from 'react';
+import { trackEvent } from '@/lib/analytics';
 
 interface CodeBlockProps {
   code: string;
   language: 'bash' | 'typescript' | 'json' | 'javascript';
   title?: string;
   showCopy?: boolean;
+  eventContext?: string;
 }
 
-export function CodeBlock({ code, language, title, showCopy = true }: CodeBlockProps) {
+export function CodeBlock({
+  code,
+  language,
+  title,
+  showCopy = true,
+  eventContext,
+}: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    trackEvent("code_copy", { context: eventContext || "code_block" });
   };
 
   const highlightCode = (code: string, lang: string) => {
     if (lang === 'bash') {
       return code.split('\n').map((line, i) => {
         if (line.startsWith('#')) {
-          return <span key={i} className="text-[#6A9955]">{line}{'\n'}</span>;
+          return (
+            <span key={i} className="text-[var(--code-comment)]">
+              {line}
+              {'\n'}
+            </span>
+          );
         }
         if (line.startsWith('curl')) {
           return (
             <span key={i}>
-              <span className="text-[#DCDCAA]">curl</span>
-              <span className="text-[#CE9178]">{line.slice(4)}</span>
+              <span className="text-[var(--code-function)]">curl</span>
+              <span className="text-[var(--code-string)]">{line.slice(4)}</span>
               {'\n'}
             </span>
           );
@@ -42,7 +56,12 @@ export function CodeBlock({ code, language, title, showCopy = true }: CodeBlockP
       return code.split('\n').map((line, i) => {
         // Full line comments
         if (line.trim().startsWith('//')) {
-          return <span key={i} style={{ color: '#6A9955' }}>{line}{'\n'}</span>;
+          return (
+            <span key={i} className="text-[var(--code-comment)]">
+              {line}
+              {'\n'}
+            </span>
+          );
         }
 
         // Simple keyword-based highlighting using word boundaries
@@ -54,9 +73,17 @@ export function CodeBlock({ code, language, title, showCopy = true }: CodeBlockP
 
         tokens.forEach((token, idx) => {
           if (keywords.includes(token)) {
-            parts.push(<span key={`${i}-${idx}`} style={{ color: '#C586C0' }}>{token}</span>);
+            parts.push(
+              <span key={`${i}-${idx}`} className="text-[var(--code-keyword)]">
+                {token}
+              </span>
+            );
           } else if (token.startsWith('`') || token.startsWith('"') || token.startsWith("'")) {
-            parts.push(<span key={`${i}-${idx}`} style={{ color: '#CE9178' }}>{token}</span>);
+            parts.push(
+              <span key={`${i}-${idx}`} className="text-[var(--code-string)]">
+                {token}
+              </span>
+            );
           } else {
             parts.push(<span key={`${i}-${idx}`}>{token}</span>);
           }
@@ -69,10 +96,22 @@ export function CodeBlock({ code, language, title, showCopy = true }: CodeBlockP
     if (lang === 'json') {
       let result = code;
       result = result.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      result = result.replace(/"([^"]+)":/g, '<span style="color:#9CDCFE">"$1"</span>:');
-      result = result.replace(/: "([^"]+)"/g, ': <span style="color:#CE9178">"$1"</span>');
-      result = result.replace(/: (\d+)/g, ': <span style="color:#B5CEA8">$1</span>');
-      result = result.replace(/: (null|true|false)/g, ': <span style="color:#569CD6">$1</span>');
+      result = result.replace(
+        /"([^"]+)":/g,
+        '<span style="color:var(--code-key)">"$1"</span>:'
+      );
+      result = result.replace(
+        /: "([^"]+)"/g,
+        ': <span style="color:var(--code-string)">"$1"</span>'
+      );
+      result = result.replace(
+        /: (\d+)/g,
+        ': <span style="color:var(--code-number)">$1</span>'
+      );
+      result = result.replace(
+        /: (null|true|false)/g,
+        ': <span style="color:var(--code-constant)">$1</span>'
+      );
 
       return <span dangerouslySetInnerHTML={{ __html: result }} />;
     }
@@ -97,7 +136,7 @@ export function CodeBlock({ code, language, title, showCopy = true }: CodeBlockP
           )}
         </div>
       )}
-      <pre className="p-4 overflow-x-auto font-mono text-sm leading-relaxed text-[var(--text-primary)]">
+      <pre className="p-4 overflow-x-auto font-mono text-sm leading-relaxed text-[var(--code-base)]">
         <code>{highlightCode(code, language)}</code>
       </pre>
     </div>

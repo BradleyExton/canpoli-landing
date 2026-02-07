@@ -1,109 +1,69 @@
 'use client';
 
 import { useState } from 'react';
-import { CodeBlock } from './ui/CodeBlock';
+import { CodeBlock } from "@/components/ui/CodeBlock";
+import { API_BASE_URL } from '@/lib/api';
 
 const exampleResponse = `{
-  "representatives": {
-    "federal": {
-      "name": "Yasir Naqvi",
-      "riding": "Ottawa Centre",
-      "party": "Liberal",
-      "email": "yasir.naqvi@parl.gc.ca",
-      "hoc_person_id": 105689,
-      "honorific": "The Honourable",
-      "province": "Ontario",
-      "photo_url": "https://...",
-      "profile_url": "https://...",
-      "openparliament_url": "https://openparliament.ca/politicians/yasir-naqvi/",
-      "ministerial_role": null,
-      "committees": [
-        {
-          "name": "Standing Committee on Justice and Human Rights",
-          "role": "Member"
-        }
-      ],
-      "bills_sponsored": [...],
-      "recent_votes": [...]
-    },
-    "provincial": {
-      "name": "Joel Harden",
-      "riding": "Ottawa Centre",
-      "party": "NDP",
-      "email": "jharden-qp@ndp.on.ca"
-    },
-    "municipal": {
-      "name": "Ariel Troster",
-      "riding": "Somerset Ward",
-      "party": null,
-      "email": "ariel.troster@ottawa.ca"
-    }
+  "hoc_id": 1001,
+  "first_name": "Example",
+  "last_name": "MP",
+  "name": "Example MP",
+  "honorific": "Hon.",
+  "email": "example.mp@parl.gc.ca",
+  "phone": "613-555-0199",
+  "photo_url": "https://www.ourcommons.ca/Members/en/1001/photo",
+  "profile_url": "https://www.ourcommons.ca/Members/en/1001",
+  "is_active": true,
+  "party": {
+    "name": "Liberal",
+    "short_name": "LPC",
+    "color": "#D71920"
   },
-  "location": {
-    "lat": 45.4215,
-    "lng": -75.6972
+  "riding": {
+    "id": 42,
+    "name": "Ottawa Centre",
+    "province": "Ontario",
+    "fed_number": 35075
   }
 }`;
 
-const typeDefinitions = `interface CivicContextResponse {
-  representatives: {
-    federal: Representative | null;
-    provincial: Representative | null;
-    municipal: Representative | null;
-  };
-  location: {
-    lat: number;
-    lng: number;
-  };
-}
-
-interface Representative {
-  // Core fields (all levels)
+const typeDefinitions = `interface RepresentativeResponse {
+  hoc_id: number;
+  first_name?: string | null;
+  last_name?: string | null;
   name: string;
-  riding: string;
-  party: string | null;
-  email: string | null;
-
-  // Federal MP enrichment only
-  hoc_person_id?: number;
-  honorific?: string;
-  province?: string;
-  photo_url?: string;
-  profile_url?: string;
-  ministerial_role?: MinisterialRole | null;
-  parliamentary_secretary_role?: ParliamentarySecretaryRole | null;
-  committees?: Committee[];
-  parliamentary_associations?: ParliamentaryAssociation[];
-  openparliament_url?: string;
-  bills_sponsored?: Bill[];
-  recent_votes?: VoteRecord[];
+  honorific?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  photo_url?: string | null;
+  profile_url?: string | null;
+  is_active: boolean;
 }
 
-interface MinisterialRole {
-  title: string;
-  organization?: string;
-}
-
-interface Committee {
+interface PartyResponse {
   name: string;
-  role: string;
+  short_name?: string | null;
+  color?: string | null;
 }
 
-interface Bill {
-  number: string;
+interface RidingResponse {
+  id: number;
   name: string;
-  session: string;
-  introduced_date: string;
-  status: string;
+  province: string;
+  fed_number?: number | null;
 }
 
-interface VoteRecord {
-  vote_number: number;
-  session: string;
-  date: string;
-  description: string;
-  result: string;
-  member_vote: string;
+interface RepresentativeDetailResponse extends RepresentativeResponse {
+  party?: PartyResponse | null;
+  riding?: RidingResponse | null;
+}
+
+interface RepresentativeListResponse {
+  representatives: RepresentativeDetailResponse[];
+  total: number;
+  limit: number;
+  offset: number;
 }`;
 
 export function ApiDocs() {
@@ -115,23 +75,21 @@ export function ApiDocs() {
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">API Reference</h2>
           <p className="text-[var(--text-secondary)] text-lg">
-            Everything you need to integrate the Civic Context API
+            Lookup MPs by coordinates or browse federal data with filters
           </p>
         </div>
 
         <div className="space-y-12">
-          {/* Endpoint */}
           <div>
             <h3 className="text-xl font-semibold mb-4">Endpoint</h3>
             <div className="bg-[var(--code-bg)] rounded-xl p-4 border border-[var(--border)] font-mono">
               <span className="text-[#C586C0]">GET</span>{' '}
               <span className="text-[var(--text-primary)]">
-                https://api.canpoli.dev/civic/
+                {API_BASE_URL}/v1/representatives/lookup
               </span>
             </div>
           </div>
 
-          {/* Parameters */}
           <div>
             <h3 className="text-xl font-semibold mb-4">Parameters</h3>
             <div className="overflow-x-auto">
@@ -190,7 +148,6 @@ export function ApiDocs() {
             </div>
           </div>
 
-          {/* Response Schema */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Response Schema</h3>
@@ -204,23 +161,30 @@ export function ApiDocs() {
 
             {showTypes && (
               <div className="mb-6">
-                <CodeBlock code={typeDefinitions} language="typescript" title="types.ts" />
+                <CodeBlock
+                  code={typeDefinitions}
+                  language="typescript"
+                  title="types.ts"
+                  eventContext="api_docs_types"
+                />
               </div>
             )}
 
             <p className="text-[var(--text-secondary)] mb-4">
-              The response includes representatives for each level of government at the specified location.
-              Federal MPs include enriched data from the House of Commons and OpenParliament.
+              The lookup response returns a single federal MP with nested party and riding data.
             </p>
           </div>
 
-          {/* Example Response */}
           <div>
             <h3 className="text-xl font-semibold mb-4">Example Response</h3>
-            <CodeBlock code={exampleResponse} language="json" title="Response" />
+            <CodeBlock
+              code={exampleResponse}
+              language="json"
+              title="Response"
+              eventContext="api_docs_response"
+            />
           </div>
 
-          {/* Error Responses */}
           <div>
             <h3 className="text-xl font-semibold mb-4">Error Responses</h3>
             <div className="overflow-x-auto">
@@ -246,18 +210,26 @@ export function ApiDocs() {
                   </tr>
                   <tr className="border-b border-[var(--border)]">
                     <td className="py-3 px-4 font-mono text-sm text-yellow-400">
-                      503
+                      404
                     </td>
                     <td className="py-3 px-4 text-sm text-[var(--text-secondary)]">
-                      Upstream service unavailable - Data source temporarily unreachable
+                      Riding or representative not found for coordinates
                     </td>
                   </tr>
                   <tr className="border-b border-[var(--border)]">
                     <td className="py-3 px-4 font-mono text-sm text-yellow-400">
-                      504
+                      429
                     </td>
                     <td className="py-3 px-4 text-sm text-[var(--text-secondary)]">
-                      Upstream timeout - Request to data source timed out
+                      Rate limit exceeded
+                    </td>
+                  </tr>
+                  <tr className="border-b border-[var(--border)]">
+                    <td className="py-3 px-4 font-mono text-sm text-yellow-400">
+                      501
+                    </td>
+                    <td className="py-3 px-4 text-sm text-[var(--text-secondary)]">
+                      Postal code lookup not implemented
                     </td>
                   </tr>
                 </tbody>

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { DM_Sans, DM_Mono, Fraunces } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
+import { AnalyticsListener } from "@/components/chrome/AnalyticsListener";
+import { ConsentBanner } from "@/components/chrome/ConsentBanner";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -24,35 +28,47 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Civic Context API — Canadian Political Data",
+  metadataBase: new URL("https://canpoli.dev"),
+  title: "CanPoli API — Canadian MP Data",
   description:
-    "Free API for Canadian elected representatives. Get federal MPs, provincial MLAs, and municipal councillors for any location.",
+    "Canadian Political Data API for federal MPs, ridings, and parties. Lookup by coordinates or browse filterable lists.",
   keywords: [
     "Canada",
     "API",
-    "civic",
-    "representatives",
     "MP",
-    "MLA",
-    "MPP",
-    "councillor",
+    "House of Commons",
+    "riding",
+    "party",
     "politics",
     "government",
     "federal",
-    "provincial",
-    "municipal",
+    "representatives",
   ],
   openGraph: {
-    title: "Civic Context API — Canadian Political Data",
-    description: "Free API for Canadian civic data",
+    title: "CanPoli API — Canadian MP Data",
+    description: "Canadian Political Data API for federal MPs, ridings, and parties",
     url: "https://canpoli.dev",
     type: "website",
     siteName: "canpoli.dev",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "CanPoli API",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Civic Context API — Canadian Political Data",
-    description: "Free API for Canadian elected representatives",
+    title: "CanPoli API — Canadian MP Data",
+    description: "Canadian Political Data API for federal MPs, ridings, and parties",
+    images: ["/og.png"],
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
   robots: {
     index: true,
@@ -65,12 +81,39 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  const isProd = process.env.NODE_ENV === "production";
+
   return (
     <html lang="en" className="scroll-smooth">
+      {gaId && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            strategy="afterInteractive"
+          />
+          <Script id="ga4-init" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', { analytics_storage: 'denied' });
+              gtag('js', new Date());
+              gtag('config', '${gaId}', {
+                anonymize_ip: true,
+                debug_mode: ${!isProd},
+              });
+            `}
+          </Script>
+        </>
+      )}
       <body
         className={`${dmSans.variable} ${dmMono.variable} ${fraunces.variable} antialiased`}
       >
-        {children}
+        <ClerkProvider>
+          {children}
+          <AnalyticsListener />
+          {gaId && <ConsentBanner />}
+        </ClerkProvider>
       </body>
     </html>
   );
