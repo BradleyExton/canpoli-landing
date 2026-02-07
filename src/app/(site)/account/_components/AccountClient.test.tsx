@@ -194,7 +194,7 @@ describe("AccountClient", () => {
 
     await screen.findByText("Your new key (shown once):");
     const copyButton = await screen.findByRole("button", { name: "Copy" });
-    copyButton.click();
+    await user.click(copyButton);
 
     expect(writeTextSpy).toHaveBeenCalledWith("ck_copy_123");
 

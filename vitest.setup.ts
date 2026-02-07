@@ -7,12 +7,10 @@ vi.mock("next/image", () => ({
   default: ({
     src,
     alt,
-    priority,
     ...rest
   }: {
     src: string;
     alt?: string;
-    priority?: boolean;
   }) => React.createElement("img", { src, alt, ...rest }),
 }));
 
